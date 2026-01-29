@@ -25,6 +25,11 @@ func (l *Lexer) Tokenise() ([]Token, error) {
 		}
 		
 		tokenType := l.Categorise(value)
+		
+		if tokenType == Negation {
+			value = "-u"
+		}
+
 		if tokenType == Error {
 			return nil, fmt.Errorf("unknown token '%s'", value)
 		}
@@ -87,8 +92,9 @@ func (l *Lexer) isNegation(tokenValue string) bool {
 	}
 	
 	previousTokenType := l.tokens[len(l.tokens)-1].Type
-	if previousTokenType == LeftBrace || previousTokenType == Operator || previousTokenType == Negation {
-		return true
-	}
-	return false
+	return previousTokenType == LeftBrace ||
+		   previousTokenType == Operator ||
+		   previousTokenType == Negation || 
+		   previousTokenType == Function ||
+		   previousTokenType == Negation
 }

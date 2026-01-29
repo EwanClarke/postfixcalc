@@ -4,6 +4,7 @@ type TokenType int
 const (
 	Number TokenType = iota
 	Operator
+	Function
 	LeftBrace
 	RightBrace
 	Negation
@@ -11,7 +12,7 @@ const (
 )
 
 func (t TokenType) String() string {
-	return [...]string{"Number", "Operator", "LeftBrace", "RightBrace", "Negation", "Error"}[t]
+	return [...]string{"Number", "Operator", "Function", "LeftBrace", "RightBrace", "Negation", "Error"}[t]
 }
 
 var operatorMap = map[string]TokenType {
@@ -22,6 +23,9 @@ var operatorMap = map[string]TokenType {
 	"^": Operator,
 	"(": LeftBrace,
 	")": RightBrace,
+	"sin": Function,
+	"cos": Function,
+	"tan": Function,
 }
 
 type Token struct {
