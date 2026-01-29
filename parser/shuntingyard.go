@@ -5,10 +5,8 @@ import (
 	"fmt"
 )
 
-func New(tokens []lexer.Token) *Parser {
-	return &Parser{
-		input: tokens,
-	}
+func New() *Parser {
+	return &Parser{}
 }
 
 type Parser struct {
