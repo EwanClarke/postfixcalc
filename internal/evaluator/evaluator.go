@@ -1,6 +1,6 @@
 package evaluator
 import (
-	"github.com/EwanClarke/postfixcalc/lexer"
+	"github.com/EwanClarke/postfixcalc/internal/lexer"
 	"strconv"
 	"errors"
 	"fmt"
