@@ -6,6 +6,7 @@ import (
 	"github.com/EwanClarke/postfixcalc/internal/lexer"
 	"github.com/EwanClarke/postfixcalc/internal/parser"
 	"github.com/EwanClarke/postfixcalc/internal/evaluator"
+	"github.com/EwanClarke/postfixcalc/internal/tui"
 	"github.com/spf13/cobra"
 )
 
@@ -20,7 +21,10 @@ var rootCmd = &cobra.Command {
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) == 0 {
 			// launch TUI
-			fmt.Println("bubble tea TUI WIP")
+			if err := tui.Start(); err != nil {
+				fmt.Printf("Error: %v", err)
+				os.Exit(1)
+			}
 			return
 		}
 		
@@ -53,10 +57,11 @@ func executeLogic(input string) {
 		fmt.Printf("Evaluation Error: %v\n", err)
 		return
 	}
-
+	
 	if verbose {
+		fmt.Printf("Input: %v\n", lexer.CanonicalString(tokens))
 		fmt.Printf("Tokens: %v\n", tokens)
-		fmt.Printf("Postfix: %v\n", postfix)
+		fmt.Printf("Postfix: %v\n", lexer.CanonicalString(postfix))
 		fmt.Print("Result: ")
 	}
 	

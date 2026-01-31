@@ -3,6 +3,7 @@ import (
 	"strconv"
 	"fmt"
 	"unicode"
+	"strings"
 )
 
 type Lexer struct {
@@ -26,12 +27,12 @@ func (l *Lexer) Tokenise() ([]Token, error) {
 		
 		tokenType := l.Categorise(value)
 		
-		if tokenType == Negation {
-			value = "-u"
-		}
-
 		if tokenType == Error {
 			return nil, fmt.Errorf("unknown token '%s'", value)
+		} else if tokenType == Function {
+			value = strings.ToLower(value)
+		} else if tokenType == Negation {
+			value = "-u"
 		}
 
 		l.tokens = append(l.tokens, Token{Value: value, Type: tokenType})
@@ -67,8 +68,9 @@ func (l *Lexer) Categorise(tokenValue string) TokenType {
 	if l.isNegation(tokenValue) {
 		return Negation
 	}
-
-	if tType, ok := operatorMap[tokenValue]; ok {
+	
+	lowercaseValue := strings.ToLower(tokenValue)
+	if tType, ok := operatorMap[lowercaseValue]; ok {
 		return tType
 	}
 
