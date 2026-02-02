@@ -22,12 +22,17 @@ type Styles struct {
 	Footer lipgloss.Style
 
 	PrimaryGrid lipgloss.Style
+	BorderAround lipgloss.Style
 }
 
 func DefaultStyles() Styles {
 	s := Styles{}
 
 	width := 30
+
+	s.BorderAround = lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		Padding(0, 1)
 
 	s.Button = lipgloss.NewStyle().
 		Padding(0, 2).

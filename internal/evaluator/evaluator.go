@@ -60,9 +60,9 @@ func (e *Evaluator) evaluateBinary(token lexer.Token) error {
 	if len(e.resultStack) < 2 {
 		return fmt.Errorf("Stack Underflow: missing operands for '%s'", token.Value)
 	}
-	a, err := e.popValue()
-	if err != nil {return err}
 	b, err := e.popValue()
+	if err != nil {return err}
+	a, err := e.popValue()
 	if err != nil {return err}
 
 	result, err := e.applyBinaryOp(token.Value, a, b)
