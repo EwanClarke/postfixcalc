@@ -3,25 +3,25 @@ package tui
 import "github.com/charmbracelet/lipgloss"
 
 type Styles struct {
-	NavMode lipgloss.Style
+	NavMode  lipgloss.Style
 	EditMode lipgloss.Style
 
-	Screen lipgloss.Style
+	Screen     lipgloss.Style
 	ActiveScrn lipgloss.Style
-	Output lipgloss.Style
+	Output     lipgloss.Style
 
-	Button lipgloss.Style
-	ActiveBtn lipgloss.Style
-	OpBtn lipgloss.Style
-	ActiveOpBtn lipgloss.Style
-	CtrlBtn lipgloss.Style
+	Button        lipgloss.Style
+	ActiveBtn     lipgloss.Style
+	OpBtn         lipgloss.Style
+	ActiveOpBtn   lipgloss.Style
+	CtrlBtn       lipgloss.Style
 	ActiveCtrlBtn lipgloss.Style
-	ActnBtn lipgloss.Style
+	ActnBtn       lipgloss.Style
 	ActiveActnBtn lipgloss.Style
 
 	Footer lipgloss.Style
 
-	PrimaryGrid lipgloss.Style
+	PrimaryGrid  lipgloss.Style
 	BorderAround lipgloss.Style
 }
 
@@ -36,7 +36,7 @@ func DefaultStyles() Styles {
 
 	s.Button = lipgloss.NewStyle().
 		Padding(0, 2).
-		Margin(0,0, 0,0).
+		Margin(0, 0, 0, 0).
 		Foreground(lipgloss.Color("7")).
 		Border(lipgloss.NormalBorder()).
 		BorderForeground(lipgloss.Color("7"))
@@ -74,22 +74,23 @@ func DefaultStyles() Styles {
 	s.Screen = lipgloss.NewStyle().
 		Border(lipgloss.NormalBorder()).
 		BorderForeground(lipgloss.Color("5")).
-		Width(width-2).
+		Width(width - 2).
 		Height(2)
-	
+
 	s.ActiveScrn = s.Screen.Copy().
 		Border(lipgloss.ThickBorder()).
 		BorderForeground(lipgloss.Color("13"))
 
 	s.Output = lipgloss.NewStyle().
-		Width(width-4).
+		Width(width - 4).
 		Align(lipgloss.Right)
-	
+
 	s.Footer = lipgloss.NewStyle().
-		Width(width-2).
+		Width(width+2).
 		Border(lipgloss.RoundedBorder()).
+		Padding(0, 1).
 		AlignHorizontal(lipgloss.Center)
-	
+
 	s.PrimaryGrid = lipgloss.NewStyle().
 		Width(width).
 		AlignHorizontal(lipgloss.Center)

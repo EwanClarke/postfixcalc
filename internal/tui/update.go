@@ -9,6 +9,12 @@ import (
 )
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.termWidth = msg.Width
+		m.termHeight = msg.Height
+	}
+
 	if shouldQuit, cmd := m.handleGlobalKeys(msg); shouldQuit {
 		return m, cmd
 	}
@@ -61,7 +67,9 @@ func (m model) handleNavMode(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.inputField.Focus()
 		}
 	case tea.MouseMsg:
-		m.mode = Cursor
+		if msg.Type == tea.MouseLeft {
+			m.mode = Cursor
+		}
 	}
 	return m, nil
 }
@@ -83,15 +91,21 @@ func (m model) handleEditMode(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 	case tea.MouseMsg:
-		m.mode = Cursor
+		if msg.Type == tea.MouseLeft {
+			m.mode = Cursor
+		}
 	}
 	return m, nil
 }
 
 func (m model) handleCursorMode(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg.(type) {
+	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		m.mode = Nav
+	case tea.MouseMsg:
+		if msg.Type == tea.MouseLeft {
+			// Just stay in cursor mode on left click
+		}
 	}
 	return m, nil
 }
@@ -156,6 +170,10 @@ func (m *model) handleButtonPress() {
 
 func (m model) getSelectedButton() Button {
 	return m.primaryGrid[m.cursor.row][m.cursor.col]
+}
+
+func (m *model) handleMouseClick(msg tea.MouseMsg) {
+	// No button click handling - only cursor mode switching
 }
 
 func (m *model) executeCalculation() {

@@ -6,16 +6,19 @@ import (
 )
 
 type InputMode int
+
 const (
 	Nav InputMode = iota
 	Edit
 	Cursor
 )
+
 func (i InputMode) String() string {
 	return [...]string{"Nav", "Edit", "Cursor"}[i]
 }
 
 type CursorLocation int
+
 const (
 	OnGrid CursorLocation = iota
 	OnScreen
@@ -38,10 +41,10 @@ const (
 )
 
 type Button struct {
-	Label  string
-	Value  string
-	Type   ButtonType
-	Width  int
+	Label string
+	Value string
+	Type  ButtonType
+	Width int
 }
 
 type ToggleButton struct {
@@ -49,19 +52,23 @@ type ToggleButton struct {
 }
 
 type OutputMode int
+
 const (
 	Standard OutputMode = iota
 	Decimal
 )
+
 func (o OutputMode) String() string {
 	return [...]string{"S", "D"}[0]
 }
 
 type AngleMode int
+
 const (
 	Degrees AngleMode = iota
 	Radians
 )
+
 func (a AngleMode) String() string {
 	return [...]string{"Deg", "Rad"}[a]
 }
@@ -76,6 +83,8 @@ type model struct {
 	outputMode     OutputMode
 	angleMode      AngleMode
 	primaryGrid    [][]Button
+	termWidth      int
+	termHeight     int
 }
 
 func InitialModel() model {
@@ -87,6 +96,8 @@ func InitialModel() model {
 		mode:           Nav,
 		styles:         DefaultStyles(),
 		cursorLocation: OnGrid,
+		termWidth:      80, // default fallback
+		termHeight:     24, // default fallback
 		primaryGrid: [][]Button{
 			{{Label: "C", Type: Control, Value: "clear"}, {Label: "(", Type: Operator, Value: "("}, {Label: ")", Type: Operator, Value: ")"}, {Label: "*", Type: Operator, Value: "*"}},
 			{{Label: "7", Value: "7"}, {Label: "8", Value: "8"}, {Label: "9", Value: "9"}, {Label: "/", Type: Operator, Value: "/"}},

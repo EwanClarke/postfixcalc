@@ -12,7 +12,18 @@ func (m model) View() string {
 	mainContent := lipgloss.JoinVertical(lipgloss.Left, screen, mainGrid)
 	mainContent = m.styles.BorderAround.Render(mainContent)
 
-	return lipgloss.JoinVertical(lipgloss.Left, mainContent, footer)
+	fullContent := lipgloss.JoinVertical(lipgloss.Left, mainContent, footer)
+
+	// Center the content
+	return lipgloss.Place(
+		m.termWidth,
+		m.termHeight,
+		lipgloss.Center,
+		lipgloss.Center,
+		fullContent,
+		lipgloss.WithWhitespaceChars(" "),
+		lipgloss.WithWhitespaceForeground(lipgloss.NoColor{}),
+	)
 }
 
 func (m model) renderInputOutput() string {
@@ -82,7 +93,18 @@ func (m model) getActiveButtonStyle(btnType ButtonType) lipgloss.Style {
 }
 
 func (m model) renderFooter() string {
-	return m.styles.Footer.Render("Press 'q' or 'ctrl+c' to exit.")
+	var instructions string
+
+	switch m.mode {
+	case Nav:
+		instructions = "↑↓←→/hjkl navigate | Enter/Space select | / edit | Mouse cursor mode"
+	case Edit:
+		instructions = "Type expression | Esc back to nav | Mouse cursor mode"
+	case Cursor:
+		instructions = "Any key back to nav | Mouse click to navigate"
+	}
+
+	return m.styles.Footer.Render(instructions)
 }
 
 func (m model) renderScreenContent() string {
