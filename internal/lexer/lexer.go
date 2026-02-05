@@ -97,6 +97,5 @@ func (l *Lexer) isNegation(tokenValue string) bool {
 	return previousTokenType == LeftBrace ||
 		   previousTokenType == Operator ||
 		   previousTokenType == Negation || 
-		   previousTokenType == Function ||
-		   previousTokenType == Negation
+		   previousTokenType == Function
 }

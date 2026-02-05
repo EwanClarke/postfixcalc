@@ -1,8 +1,9 @@
 package parser
+
 import (
-	"github.com/EwanClarke/postfixcalc/internal/lexer"
 	"errors"
 	"fmt"
+	"github.com/EwanClarke/postfixcalc/internal/lexer"
 )
 
 func New() *Parser {
@@ -10,12 +11,12 @@ func New() *Parser {
 }
 
 type Parser struct {
-	input []lexer.Token
+	input         []lexer.Token
 	previousToken lexer.Token
-	hasPrev bool
+	hasPrev       bool
 	operatorStack []lexer.Token
-	outputQueue []lexer.Token
-	err error
+	outputQueue   []lexer.Token
+	err           error
 }
 
 func (p *Parser) pushOperator(token lexer.Token) {
@@ -27,7 +28,7 @@ func (p *Parser) popOperator() lexer.Token {
 	if stackSize == 0 {
 		return lexer.Token{Type: lexer.Error}
 	}
-	
+
 	removedOperator := p.operatorStack[stackSize-1]
 	p.operatorStack = p.operatorStack[:stackSize-1]
 	return removedOperator
@@ -65,7 +66,7 @@ func (p *Parser) setError(msg string) {
 func (p *Parser) Convert(tokens []lexer.Token) ([]lexer.Token, error) {
 	for _, t := range tokens {
 		p.handleToken(t)
-		
+
 		if p.err != nil {
 			return nil, p.err
 		}
@@ -93,7 +94,7 @@ func (p *Parser) handleToken(token lexer.Token) {
 	case lexer.Operator, lexer.Function, lexer.Negation:
 		p.handleOperator(token)
 	}
-	
+
 	p.previousToken = token
 	p.hasPrev = true
 }
@@ -116,7 +117,7 @@ func (p *Parser) handleOperator(token lexer.Token) {
 		topProps := OperatorPropsMap[topToken.Value]
 		if topProps.Precedence > tokenProps.Precedence ||
 			(topProps.Precedence == tokenProps.Precedence && !tokenProps.RightAssoc) {
-			
+
 			p.enqueue(p.popOperator())
 		} else {
 			break
@@ -126,17 +127,17 @@ func (p *Parser) handleOperator(token lexer.Token) {
 }
 
 func (p *Parser) handleImplicitMult(currentToken lexer.Token) {
-	if !p.hasPrev{
+	if !p.hasPrev {
 		return
 	}
-	
+
 	prev := p.previousToken.Type
 	curr := currentToken.Type
-	
+
 	insertMult := false
 	if (prev == lexer.Number || prev == lexer.RightBrace) &&
-	   (curr == lexer.LeftBrace || curr == lexer.Function) {
-		
+		(curr == lexer.LeftBrace || curr == lexer.Function) {
+
 		insertMult = true
 	}
 
@@ -166,10 +167,10 @@ func (p *Parser) validateSequence(curr lexer.Token) {
 	switch curr.Type {
 	case lexer.Operator, lexer.RightBrace:
 		if prev.Type == lexer.Operator ||
-		   prev.Type == lexer.LeftBrace ||
-		   prev.Type == lexer.Negation ||
-		   prev.Type == lexer.Function {
-			
+			prev.Type == lexer.LeftBrace ||
+			prev.Type == lexer.Negation ||
+			prev.Type == lexer.Function {
+
 			p.setError(fmt.Sprintf("Syntax Error: operator '%s' cannot follow '%s'", curr.Value, prev.Value))
 		}
 	case lexer.Number, lexer.Function, lexer.LeftBrace, lexer.Negation:
@@ -182,9 +183,9 @@ func (p *Parser) validateSequence(curr lexer.Token) {
 func (p *Parser) validateEnd() {
 	last := p.previousToken
 	if last.Type == lexer.Operator ||
-	   last.Type == lexer.Function ||
-	   last.Type == lexer.Negation ||
-	   last.Type == lexer.LeftBrace {
+		last.Type == lexer.Function ||
+		last.Type == lexer.Negation ||
+		last.Type == lexer.LeftBrace {
 		p.setError(fmt.Sprintf("Syntax Error: expression ends prematurely after '%s'", last.Value))
 	}
 }

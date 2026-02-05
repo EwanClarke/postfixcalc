@@ -4,11 +4,16 @@ A terminal based postfix calculator providing CLI and TUI interfaces. CLI interf
 
 ## About
 
-<!-- Brief explanation of what the project does -->
+Postfix also known as reverse polish notation is an alternative method of ordering operands and Operators within mathematical expressions, placing the operators after the operands they apply to. This reordering makes for easier evaluation by a computer, handling precedence, brackets and associativity implicitly.
 
 ## Features
 
-This project supports basic mathematical operations (+-*/^), brackets and unary functions (sin, cos, tan). However, unary functions have currently only been implemented for the CLI and direct input in edit mode in the TUI, with plans to give them their own buttons.
+This project supports:
+- basic mathematical operations (+-*/^)
+- brackets
+- unary functions (sin, cos, tan)
+
+Unary functions currently only implemented for the CLI and direct input in edit mode, with plans to give them their own buttons.
 
 ## Quick Start
 
@@ -17,21 +22,6 @@ This project supports basic mathematical operations (+-*/^), brackets and unary 
 ```
 go install github.com/EwanClarke/postfixcalc@latest
 ```
-
-### Usage
-
-<!-- CLI and TUI usage examples with code blocks -->
-
-## Technical Architecture
-
-<!-- Overview of clean architecture and algorithms -->
-
-### Components
-
-<!-- Brief description of lexer, parser, evaluator, TUI -->
-
-### Algorithms
-This project makes use of a self implemented shunting yard algorithm along with stack based evaluation, allowing the program to handle complex expressions with strictly following BODMAS rules.
 
 ## Examples
 The calculator can be used from either the command line by following the command with a string containing the expression to evaluate, or through the TUI interface giving a more visual experience either through navigation of the on screen buttons or direct input with immediate evaluation of the current input.
@@ -60,6 +50,18 @@ Result: 22
 ### TUI Demo
 
 <!-- Screenshot placeholder and description -->
+
+
+## Technical Architecture
+
+<!-- Overview of clean architecture and algorithms -->
+
+### Components
+
+<!-- Brief description of lexer, parser, evaluator, TUI -->
+
+### Algorithms
+This project makes use of a self implemented shunting yard algorithm along with stack based evaluation, allowing the program to handle complex expressions with strictly following BODMAS rules.
 
 ## Project Structure
 
@@ -97,11 +99,25 @@ postfixcalc/
 
 ## Testing
 
-<!-- Information about tests and coverage -->
+Unit tests have been implemented for low-level functions in each of the tokenisation, conversion and evaluation steps.
+These tests can be run with the following command:
+```
+make test
+```
+verbose and coverage outputs are also obtainable using:
+```
+make test-verbose
+```
+and
+```
+make test-coverage
+```
+## Planned Additions
 
-## Contributing
-
-<!-- Contribution guidelines -->
+- Number values to be handled internally as bit.Rat instead of float64, allowing for fractional output in addition to decimal
+- expandable function tray which hides function buttons and lesser used operations
+- Commonly used constants such as e and pi
+- standard output for built-in constants
 
 ## License
 

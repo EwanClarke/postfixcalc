@@ -93,6 +93,7 @@ func (m model) handleEditMode(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.MouseMsg:
 		if msg.Type == tea.MouseLeft {
 			m.mode = Cursor
+			m.inputField.Blur()
 		}
 	}
 	return m, nil
