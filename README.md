@@ -48,7 +48,7 @@ Result: 22
 
 ### TUI Demo
 
-<img src="demo.gif" width="600" alt="TUI Demo">
+<img src="demo.gif" width="300" alt="TUI Demo">
 
 ## Technical Architecture
 
