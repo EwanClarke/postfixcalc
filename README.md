@@ -1,10 +1,8 @@
 # postfixcalc
 
-A terminal based postfix calculator providing CLI and TUI interfaces. CLI interface provides quick access to a calculator for single expression, where the TUI provides a familiar calculator interface navigable through arrow keys or vim-style bindings (hjkl).
-
 ## About
 
-Postfix also known as reverse polish notation is an alternative method of ordering operands and Operators within mathematical expressions, placing the operators after the operands they apply to. This reordering makes for easier evaluation by a computer, handling precedence, brackets and associativity implicitly.
+A terminal-based calculator that converts infix expressions to postfix (reverse polish notation) for unambiguous evaluation without precedence rules. It provides both a CLI interface for quick single-expression calculations and a TUI interface with a visual calculator layout navigable via arrow keys or vim-style bindings (hjkl).
 
 ## Features
 
@@ -24,6 +22,7 @@ go install github.com/EwanClarke/postfixcalc@latest
 ```
 
 ## Examples
+
 The calculator can be used from either the command line by following the command with a string containing the expression to evaluate, or through the TUI interface giving a more visual experience either through navigation of the on screen buttons or direct input with immediate evaluation of the current input.
 
 ### CLI Examples
@@ -49,16 +48,18 @@ Result: 22
 
 ### TUI Demo
 
-<!-- Screenshot placeholder and description -->
-
+![TUI Demo](demo.gif)
 
 ## Technical Architecture
 
-<!-- Overview of clean architecture and algorithms -->
+The project follows a clean architecture pattern with clear separation of concerns between interfaces and core logic.
 
 ### Components
 
-<!-- Brief description of lexer, parser, evaluator, TUI -->
+- **Lexer**: Tokenizes input strings into numbers, operators, and functions
+- **Parser**: Converts infix expressions to postfix using the shunting yard algorithm
+- **Evaluator**: Evaluates postfix expressions using a stack-based approach
+- **TUI**: Interactive terminal interface built with the bubbletea framework
 
 ### Algorithms
 This project makes use of a self implemented shunting yard algorithm along with stack based evaluation, allowing the program to handle complex expressions with strictly following BODMAS rules.
@@ -96,7 +97,6 @@ postfixcalc/
 └── README.md
 ```
 
-
 ## Testing
 
 Unit tests have been implemented for low-level functions in each of the tokenisation, conversion and evaluation steps.
@@ -112,6 +112,7 @@ and
 ```
 make test-coverage
 ```
+
 ## Planned Additions
 
 - Number values to be handled internally as bit.Rat instead of float64, allowing for fractional output in addition to decimal
@@ -121,4 +122,4 @@ make test-coverage
 
 ## License
 
-<!-- License information -->
+This project is licensed under the MIT License - see the LICENSE file for details.
