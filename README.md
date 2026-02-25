@@ -2,7 +2,7 @@
 
 ## About
 
-A terminal-based calculator that converts infix expressions to postfix (reverse polish notation) for unambiguous evaluation without precedence rules. It provides both a CLI interface for quick single-expression calculations and a TUI interface with a visual calculator layout navigable via arrow keys or vim-style bindings (hjkl).
+A terminal-based calculator that converts infix expressions to postfix (reverse polish notation) for unambiguous evaluation without precedence rules. It provides both a CLI interface for quick single-expression calculations and TUI interfaces with a visual calculator layout navigable via arrow keys or vim-style bindings (hjkl) in addition to a graph plotting TUI for visualizing mathematical functions.
 
 ## Features
 
@@ -10,15 +10,15 @@ This project supports:
 - basic mathematical operations (+-*/^)
 - brackets
 - unary functions (sin, cos, tan)
-
-Unary functions currently only implemented for the CLI and direct input in edit mode, with plans to give them their own buttons.
+- constants (e, Pi)
 
 ## Quick Start
 
 ### Installation
 
 ```
-go install github.com/EwanClarke/postfixcalc@latest
+go install github.com/EwanClarke/postfixcalc/cmd/calc@latest
+go install github.com/EwanClarke/postfixcalc/cmd/plot@latest
 ```
 
 ### Docker
@@ -78,41 +78,50 @@ The project follows a clean architecture pattern with clear separation of concer
 - **Lexer**: Tokenizes input strings into numbers, operators, and functions
 - **Parser**: Converts infix expressions to postfix using the shunting yard algorithm
 - **Evaluator**: Evaluates postfix expressions using a stack-based approach
-- **TUI**: Interactive terminal interface built with the bubbletea framework
+- **TUI**: Interactive terminal interfaces built with the bubbletea framework (calculator and graph plotter)
 
 ### Algorithms
 This project makes use of a self implemented shunting yard algorithm along with stack based evaluation, allowing the program to handle complex expressions with strictly following BODMAS rules.
 
 ## Project Structure
 
-The project follows Go's standard project layout with clear architecture principles. The CLI and TUI interfaces are separated from the core calculation logic, which is separated into distinct packages for tokenisation, parsing and evaluation.
+The project follows Go's standard project layout with clear architecture principles. The CLI and TUI interfaces are separated from the core calculation logic, which is contained in the engine package.
 
 ```
 postfixcalc/
 ├── cmd/
-│   └── calc/
+│   ├── calc/
+│   │   ├── main.go          # Entry point
+│   │   └── root.go          # CLI commands and flags
+│   └── plot/
 │       ├── main.go          # Entry point
 │       └── root.go          # CLI commands and flags
 ├── internal/
-│   ├── lexer/
+│   ├── engine/              # Core calculation logic
 │   │   ├── lexer.go         # Tokenisation logic
 │   │   ├── token.go         # Token definitions
-│   │   └── lexer_test.go
-│   ├── parser/
-│   │   ├── shuntingyard.go  # Infix to postfix conversion
-│   │   ├── rules.go         # Parser rules
-│   │   └── shuntingyard_test.go
-│   ├── evaluator/
+│   │   ├── parser.go        # Infix to postfix conversion
 │   │   ├── evaluator.go     # Postfix evaluation
-│   │   └── evaluator_test.go
-│   └── tui/                 # bubbletea TUI
-│       ├── model.go
-│       ├── view.go
-│       ├── update.go
-│       ├── styles.go
-│       └── tui.go           # TUI entry point
+│   │   ├── constants.go    # Mathematical constants
+│   │   └── engine_test.go
+│   └── tui/
+│       ├── calc_ui/         # Calculator TUI
+│       │   ├── model.go
+│       │   ├── view.go
+│       │   ├── update.go
+│       │   ├── styles.go
+│       │   └── tui.go
+│       └── graph_ui/        # Graph plotter TUI
+│           ├── model.go
+│           ├── view.go
+│           ├── update.go
+│           ├── styles.go
+│           ├── canvas.go
+│           └── tui.go
 ├── go.mod
 ├── go.sum
+├── Dockerfile
+├── entrypoint.sh
 └── README.md
 ```
 
@@ -136,8 +145,6 @@ make test-coverage
 
 - Number values to be handled internally as bit.Rat instead of float64, allowing for fractional output in addition to decimal
 - expandable function tray which hides function buttons and lesser used operations
-- Commonly used constants such as e and pi
-- standard output for built-in constants
 
 ## License
 
