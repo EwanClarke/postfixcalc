@@ -1,10 +1,8 @@
-package tui
+package calcui
 
 import (
 	"fmt"
-	"github.com/EwanClarke/postfixcalc/internal/evaluator"
-	"github.com/EwanClarke/postfixcalc/internal/lexer"
-	"github.com/EwanClarke/postfixcalc/internal/parser"
+	"github.com/EwanClarke/postfixcalc/internal/engine"
 	"github.com/charmbracelet/bubbletea"
 )
 
@@ -182,26 +180,14 @@ func (m *model) executeCalculation() {
 
 	if len(rawInput) == 0 {
 		m.outputField = ""
-	}
-
-	l := lexer.New(rawInput)
-	tokens, err := l.Tokenise()
-	if err != nil {
 		return
 	}
 
-	p := parser.New()
-	postfix, err := p.Convert(tokens)
+	e := engine.NewEngine()
+	result, err := e.Calculate(rawInput)
 	if err != nil {
-		return
-	}
-
-	e := evaluator.New()
-	result, err := e.Evaluate(postfix)
-	if err != nil {
-		return
+		m.outputField = fmt.Sprintf("error %v", err)
 	} else {
 		m.outputField = fmt.Sprintf("%g", result)
 	}
-
 }

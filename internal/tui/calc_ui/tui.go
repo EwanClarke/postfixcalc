@@ -1,4 +1,4 @@
-package tui
+package calcui
 
 import tea "github.com/charmbracelet/bubbletea"
 

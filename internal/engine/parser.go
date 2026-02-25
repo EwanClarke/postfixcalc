@@ -1,32 +1,48 @@
-package parser
+package engine
 
 import (
 	"errors"
 	"fmt"
-	"github.com/EwanClarke/postfixcalc/internal/lexer"
 )
 
-func New() *Parser {
-	return &Parser{}
+type OperatorProps struct {
+	Precedence int
+	RightAssoc bool
+}
+
+var OperatorPropsMap = map[string]OperatorProps{
+	"+":   {Precedence: 2, RightAssoc: false},
+	"-":   {Precedence: 2, RightAssoc: false},
+	"*":   {Precedence: 3, RightAssoc: false},
+	"/":   {Precedence: 3, RightAssoc: false},
+	"^":   {Precedence: 4, RightAssoc: true},
+	"-u":  {Precedence: 5, RightAssoc: true},
+	"sin": {Precedence: 5, RightAssoc: true},
+	"cos": {Precedence: 5, RightAssoc: true},
+	"tan": {Precedence: 5, RightAssoc: true},
 }
 
 type Parser struct {
-	input         []lexer.Token
-	previousToken lexer.Token
+	input         []Token
+	previousToken Token
 	hasPrev       bool
-	operatorStack []lexer.Token
-	outputQueue   []lexer.Token
+	operatorStack []Token
+	outputQueue   []Token
 	err           error
 }
 
-func (p *Parser) pushOperator(token lexer.Token) {
+func NewParser() *Parser {
+	return &Parser{}
+}
+
+func (p *Parser) pushOperator(token Token) {
 	p.operatorStack = append(p.operatorStack, token)
 }
 
-func (p *Parser) popOperator() lexer.Token {
+func (p *Parser) popOperator() Token {
 	stackSize := len(p.operatorStack)
 	if stackSize == 0 {
-		return lexer.Token{Type: lexer.Error}
+		return Token{Type: Error}
 	}
 
 	removedOperator := p.operatorStack[stackSize-1]
@@ -38,20 +54,20 @@ func (p *Parser) hasOperators() bool {
 	return len(p.operatorStack) > 0
 }
 
-func (p *Parser) peekOperator() lexer.Token {
+func (p *Parser) peekOperator() Token {
 	if len(p.operatorStack) == 0 {
-		return lexer.Token{Type: lexer.Error}
+		return Token{Type: Error}
 	}
 	return p.operatorStack[len(p.operatorStack)-1]
 }
 
-func (p *Parser) enqueue(token lexer.Token) {
+func (p *Parser) enqueue(token Token) {
 	p.outputQueue = append(p.outputQueue, token)
 }
 
-func (p *Parser) dequeue() lexer.Token {
+func (p *Parser) dequeue() Token {
 	if len(p.outputQueue) == 0 {
-		return lexer.Token{Type: lexer.Error}
+		return Token{Type: Error}
 	}
 
 	removedToken := p.outputQueue[0]
@@ -63,7 +79,7 @@ func (p *Parser) setError(msg string) {
 	p.err = errors.New(msg)
 }
 
-func (p *Parser) Convert(tokens []lexer.Token) ([]lexer.Token, error) {
+func (p *Parser) Convert(tokens []Token) ([]Token, error) {
 	for _, t := range tokens {
 		p.handleToken(t)
 
@@ -80,18 +96,18 @@ func (p *Parser) Convert(tokens []lexer.Token) ([]lexer.Token, error) {
 	return p.outputQueue, nil
 }
 
-func (p *Parser) handleToken(token lexer.Token) {
+func (p *Parser) handleToken(token Token) {
 	p.handleImplicitMult(token)
 	p.validateSequence(token)
 
 	switch token.Type {
-	case lexer.Number:
+	case Number, Variable:
 		p.enqueue(token)
-	case lexer.LeftBrace:
+	case LeftBrace:
 		p.pushOperator(token)
-	case lexer.RightBrace:
+	case RightBrace:
 		p.handleRightBrace()
-	case lexer.Operator, lexer.Function, lexer.Negation:
+	case Operator, Function, Negation:
 		p.handleOperator(token)
 	}
 
@@ -100,17 +116,17 @@ func (p *Parser) handleToken(token lexer.Token) {
 }
 
 func (p *Parser) handleRightBrace() {
-	for len(p.operatorStack) > 0 && p.peekOperator().Type != lexer.LeftBrace {
+	for len(p.operatorStack) > 0 && p.peekOperator().Type != LeftBrace {
 		p.enqueue(p.popOperator())
 	}
 	p.popOperator()
 }
 
-func (p *Parser) handleOperator(token lexer.Token) {
+func (p *Parser) handleOperator(token Token) {
 	tokenProps := OperatorPropsMap[token.Value]
 	for p.hasOperators() {
 		topToken := p.peekOperator()
-		if topToken.Type == lexer.LeftBrace {
+		if topToken.Type == LeftBrace {
 			break
 		}
 
@@ -126,7 +142,7 @@ func (p *Parser) handleOperator(token lexer.Token) {
 	p.pushOperator(token)
 }
 
-func (p *Parser) handleImplicitMult(currentToken lexer.Token) {
+func (p *Parser) handleImplicitMult(currentToken Token) {
 	if !p.hasPrev {
 		return
 	}
@@ -135,28 +151,28 @@ func (p *Parser) handleImplicitMult(currentToken lexer.Token) {
 	curr := currentToken.Type
 
 	insertMult := false
-	if (prev == lexer.Number || prev == lexer.RightBrace) &&
-		(curr == lexer.LeftBrace || curr == lexer.Function) {
+	if (prev == Number || prev == RightBrace) &&
+		(curr == LeftBrace || curr == Function || curr == Variable) {
 
 		insertMult = true
 	}
 
-	if prev == lexer.RightBrace && curr == lexer.Number {
+	if prev == RightBrace && curr == Number {
 		insertMult = true
 	}
 
 	if insertMult {
-		multToken := lexer.Token{Type: lexer.Operator, Value: "*"}
+		multToken := Token{Type: Operator, Value: "*"}
 		p.handleOperator(multToken)
 		p.previousToken = multToken
 	}
 }
 
-func (p *Parser) validateSequence(curr lexer.Token) {
+func (p *Parser) validateSequence(curr Token) {
 	if !p.hasPrev {
-		if curr.Type == lexer.Operator {
+		if curr.Type == Operator {
 			p.setError("Syntax Error: expression cannot start with a binary operator")
-		} else if curr.Type == lexer.RightBrace {
+		} else if curr.Type == RightBrace {
 			p.setError("Syntax Error: expression cannot start with a closing bracket")
 		}
 		return
@@ -165,16 +181,16 @@ func (p *Parser) validateSequence(curr lexer.Token) {
 	prev := p.previousToken
 
 	switch curr.Type {
-	case lexer.Operator, lexer.RightBrace:
-		if prev.Type == lexer.Operator ||
-			prev.Type == lexer.LeftBrace ||
-			prev.Type == lexer.Negation ||
-			prev.Type == lexer.Function {
+	case Operator, RightBrace:
+		if prev.Type == Operator ||
+			prev.Type == LeftBrace ||
+			prev.Type == Negation ||
+			prev.Type == Function {
 
 			p.setError(fmt.Sprintf("Syntax Error: operator '%s' cannot follow '%s'", curr.Value, prev.Value))
 		}
-	case lexer.Number, lexer.Function, lexer.LeftBrace, lexer.Negation:
-		if prev.Type == lexer.Number || prev.Type == lexer.RightBrace {
+	case Number, Function, LeftBrace, Negation:
+		if prev.Type == Number || prev.Type == RightBrace {
 			p.setError(fmt.Sprintf("Syntax Error: %s value '%v' should not follow %s", curr.Type, curr.Value, prev.Type))
 		}
 	}
@@ -182,10 +198,10 @@ func (p *Parser) validateSequence(curr lexer.Token) {
 
 func (p *Parser) validateEnd() {
 	last := p.previousToken
-	if last.Type == lexer.Operator ||
-		last.Type == lexer.Function ||
-		last.Type == lexer.Negation ||
-		last.Type == lexer.LeftBrace {
+	if last.Type == Operator ||
+		last.Type == Function ||
+		last.Type == Negation ||
+		last.Type == LeftBrace {
 		p.setError(fmt.Sprintf("Syntax Error: expression ends prematurely after '%s'", last.Value))
 	}
 }
@@ -194,10 +210,10 @@ func (p *Parser) clearRemainingOperators() {
 	for len(p.operatorStack) > 0 {
 		operator := p.popOperator()
 
-		if operator.Type == lexer.LeftBrace {
+		if operator.Type == LeftBrace {
 			p.setError("Mismatched Brackets: opening '(' was never closed")
 			return
-		} else if operator.Type == lexer.RightBrace {
+		} else if operator.Type == RightBrace {
 			p.setError("Syntax Error: unexpected closing ')'")
 			return
 		}

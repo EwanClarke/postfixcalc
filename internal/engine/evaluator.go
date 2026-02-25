@@ -1,17 +1,17 @@
-package evaluator
+package engine
+
 import (
-	"github.com/EwanClarke/postfixcalc/internal/lexer"
-	"strconv"
 	"errors"
 	"fmt"
 	"math"
+	"strconv"
 )
 
 type Evaluator struct {
 	resultStack []float64
 }
 
-func New() *Evaluator {
+func NewEvaluator() *Evaluator {
 	return &Evaluator{}
 }
 
@@ -24,25 +24,33 @@ func (e *Evaluator) popValue() (float64, error) {
 		return 0, errors.New("Stack Underflow: attempted removal from empty stack")
 	}
 
-	n := len(e.resultStack)-1
+	n := len(e.resultStack) - 1
 	value := e.resultStack[n]
 	e.resultStack = e.resultStack[:n]
 	return value, nil
 }
 
-func (e *Evaluator) Evaluate(postfixTokens []lexer.Token) (float64, error) {
+func (e *Evaluator) Evaluate(postfixTokens []Token, vars map[string]float64) (float64, error) {
 	for _, token := range postfixTokens {
 		switch token.Type {
-		case lexer.Number:
+		case Number:
 			val, _ := strconv.ParseFloat(token.Value, 64)
 			e.pushValue(val)
+		
+		case Variable:
+			// find value of variable in variable map then push value
+			val, ok := vars[token.Value]
+			if !ok {
+				return 0, fmt.Errorf("variable %s not defined", token.Value)
+			}
+			e.pushValue(val)
 
-		case lexer.Operator:
+		case Operator:
 			if err := e.evaluateBinary(token); err != nil {
 				return 0, err
 			}
 
-		case lexer.Negation, lexer.Function:
+		case Negation, Function:
 			if err := e.evaluateUnary(token); err != nil {
 				return 0, err
 			}
@@ -56,32 +64,42 @@ func (e *Evaluator) Evaluate(postfixTokens []lexer.Token) (float64, error) {
 	return result, nil
 }
 
-func (e *Evaluator) evaluateBinary(token lexer.Token) error {
+func (e *Evaluator) evaluateBinary(token Token) error {
 	if len(e.resultStack) < 2 {
 		return fmt.Errorf("Stack Underflow: missing operands for '%s'", token.Value)
 	}
 	b, err := e.popValue()
-	if err != nil {return err}
+	if err != nil {
+		return err
+	}
 	a, err := e.popValue()
-	if err != nil {return err}
+	if err != nil {
+		return err
+	}
 
 	result, err := e.applyBinaryOp(token.Value, a, b)
-	if err != nil {return err}
+	if err != nil {
+		return err
+	}
 
 	e.pushValue(result)
 	return nil
 }
 
-func (e *Evaluator) evaluateUnary(token lexer.Token) error {
+func (e *Evaluator) evaluateUnary(token Token) error {
 	if len(e.resultStack) < 1 {
 		return fmt.Errorf("Stack Underflow: missing operands for '%s'", token.Value)
 	}
 
 	a, err := e.popValue()
-	if err != nil {return err}
+	if err != nil {
+		return err
+	}
 
 	result, err := e.applyUnaryOp(token.Value, a)
-	if err != nil {return err}
+	if err != nil {
+		return err
+	}
 
 	e.pushValue(result)
 	return nil
@@ -89,9 +107,12 @@ func (e *Evaluator) evaluateUnary(token lexer.Token) error {
 
 func (e *Evaluator) applyBinaryOp(operation string, a, b float64) (float64, error) {
 	switch operation {
-	case "+": return a + b, nil
-	case "-": return a - b, nil
-	case "*": return a * b, nil
+	case "+":
+		return a + b, nil
+	case "-":
+		return a - b, nil
+	case "*":
+		return a * b, nil
 	case "/":
 		if b == 0 {
 			return 0, errors.New("Math Error: division by zero")
@@ -102,17 +123,23 @@ func (e *Evaluator) applyBinaryOp(operation string, a, b float64) (float64, erro
 			return 0, errors.New("Math Error: zero cannot be raised to a negative power")
 		}
 		return math.Pow(a, b), nil
-		default: return 0, fmt.Errorf("Unknown Operator: operator '%s' usage not defined", operation)
+	default:
+		return 0, fmt.Errorf("Unknown Operator: operator '%s' usage not defined", operation)
 	}
 }
 
 func (e *Evaluator) applyUnaryOp(operation string, a float64) (float64, error) {
 	switch operation {
-	case "-u": return -a, nil
-	case "sin": return math.Sin(a), nil
-	case "cos": return math.Cos(a), nil
-	case "tan": return math.Tan(a), nil
-	default: return 0, fmt.Errorf("Unknown Operation: usage of Operation '%s' not defined", operation)
+	case "-u":
+		return -a, nil
+	case "sin":
+		return math.Sin(a), nil
+	case "cos":
+		return math.Cos(a), nil
+	case "tan":
+		return math.Tan(a), nil
+	default:
+		return 0, fmt.Errorf("Unknown Operation: usage of Operation '%s' not defined", operation)
 	}
 }
 

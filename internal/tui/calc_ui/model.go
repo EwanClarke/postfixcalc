@@ -1,4 +1,4 @@
-package tui
+package calcui
 
 import (
 	"github.com/charmbracelet/bubbles/textinput"

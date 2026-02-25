@@ -1,10 +1,12 @@
-package lexer
+package engine
 
 import "strings"
 
 type TokenType int
+
 const (
 	Number TokenType = iota
+	Variable
 	Operator
 	Function
 	LeftBrace
@@ -14,24 +16,24 @@ const (
 )
 
 func (t TokenType) String() string {
-	return [...]string{"Number", "Operator", "Function", "LeftBrace", "RightBrace", "Negation", "Error"}[t]
+	return [...]string{"Number", "Variable", "Operator", "Function", "LeftBrace", "RightBrace", "Negation", "Error"}[t]
 }
 
-var operatorMap = map[string]TokenType {
-	"+": Operator,
-	"-": Operator,
-	"*": Operator,
-	"/": Operator,
-	"^": Operator,
-	"(": LeftBrace,
-	")": RightBrace,
+var operatorMap = map[string]TokenType{
+	"+":   Operator,
+	"-":   Operator,
+	"*":   Operator,
+	"/":   Operator,
+	"^":   Operator,
+	"(":   LeftBrace,
+	")":   RightBrace,
 	"sin": Function,
 	"cos": Function,
 	"tan": Function,
 }
 
 type Token struct {
-	Type TokenType
+	Type  TokenType
 	Value string
 }
 
@@ -46,4 +48,3 @@ func CanonicalString(tokens []Token) string {
 	}
 	return sb.String()
 }
-

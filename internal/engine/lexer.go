@@ -1,32 +1,35 @@
-package lexer
+package engine
+
 import (
-	"strconv"
 	"fmt"
-	"unicode"
+	"strconv"
 	"strings"
+	"unicode"
 )
 
 type Lexer struct {
-	input []rune
-	pos int
+	input  []rune
+	pos    int
 	tokens []Token
 }
 
-func New(input string) *Lexer {
-	return &Lexer {
-		input: []rune(input),
-	}
+func NewLexer() *Lexer {
+	return &Lexer{}
 }
 
-func (l *Lexer) Tokenise() ([]Token, error) {
+func (l *Lexer) Tokenise(input string) ([]Token, error) {
+	l.input = []rune(input)
+	l.pos = 0
+	l.tokens = l.tokens[:0] // Clear tokens slice
+
 	for l.pos < len(l.input) {
 		value := l.ExtractToken()
 		if value == "" {
 			break
 		}
-		
+
 		tokenType := l.Categorise(value)
-		
+
 		if tokenType == Error {
 			return nil, fmt.Errorf("unknown token '%s'", value)
 		} else if tokenType == Function {
@@ -44,8 +47,10 @@ func (l *Lexer) ExtractToken() string {
 	for l.pos < len(l.input) && l.input[l.pos] == ' ' {
 		l.pos++
 	}
-	if l.pos >= len(l.input) {return ""}
-	
+	if l.pos >= len(l.input) {
+		return ""
+	}
+
 	start := l.pos
 	if _, ok := operatorMap[string(l.input[start])]; ok {
 		l.pos++
@@ -60,7 +65,7 @@ func (l *Lexer) ExtractToken() string {
 	} else {
 		l.pos++
 	}
-	
+
 	return string(l.input[start:l.pos])
 }
 
@@ -68,7 +73,7 @@ func (l *Lexer) Categorise(tokenValue string) TokenType {
 	if l.isNegation(tokenValue) {
 		return Negation
 	}
-	
+
 	lowercaseValue := strings.ToLower(tokenValue)
 	if tType, ok := operatorMap[lowercaseValue]; ok {
 		return tType
@@ -79,6 +84,10 @@ func (l *Lexer) Categorise(tokenValue string) TokenType {
 			return Error
 		}
 		return Number
+	}
+
+	if l.isVariable(tokenValue) {
+		return Variable
 	}
 
 	return Error
@@ -92,10 +101,23 @@ func (l *Lexer) isNegation(tokenValue string) bool {
 	if len(l.tokens) == 0 {
 		return true
 	}
-	
+
 	previousTokenType := l.tokens[len(l.tokens)-1].Type
 	return previousTokenType == LeftBrace ||
-		   previousTokenType == Operator ||
-		   previousTokenType == Negation || 
-		   previousTokenType == Function
+		previousTokenType == Operator ||
+		previousTokenType == Negation ||
+		previousTokenType == Function
+}
+
+func (l *Lexer) isVariable(tokenValue string) bool {
+	if len(tokenValue) == 0 {
+		return false
+	}
+
+	for _, c := range tokenValue {
+		if !unicode.IsLetter(c) {
+			return false
+		}
+	}
+	return true
 }

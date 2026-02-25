@@ -1,20 +1,93 @@
-package evaluator
+package engine
 
 import (
-	"github.com/EwanClarke/postfixcalc/internal/lexer"
 	"testing"
 )
 
-func TestNew(t *testing.T) {
-	e := New()
+func TestNewEngine(t *testing.T) {
+	e := NewEngine()
+
+	if e.lexer == nil || e.parser == nil || e.evaluator == nil {
+		t.Errorf("expected engine components to be initialized")
+	}
+}
+
+func TestNewLexer(t *testing.T) {
+	l := NewLexer()
+
+	if l.input != nil {
+		t.Errorf("expected lexer input to be nil initially, got %v", l.input)
+	}
+
+	// Test that Tokenise sets the input
+	_, err := l.Tokenise("2+3")
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	if string(l.input) != "2+3" {
+		t.Errorf("expected input '2+3' after tokenisation, got '%s'", string(l.input))
+	}
+}
+
+func TestNewParser(t *testing.T) {
+	p := NewParser()
+
+	if p.operatorStack != nil && len(p.operatorStack) != 0 {
+		t.Errorf("expected empty operator stack, got %v", p.operatorStack)
+	}
+
+	if p.outputQueue != nil && len(p.outputQueue) != 0 {
+		t.Errorf("expected empty output queue, got %v", p.outputQueue)
+	}
+}
+
+func TestNewEvaluator(t *testing.T) {
+	e := NewEvaluator()
 
 	if len(e.resultStack) != 0 {
 		t.Errorf("expected empty result stack, got %v", e.resultStack)
 	}
 }
 
-func TestPushValue(t *testing.T) {
-	e := New()
+func TestEngineCalculate(t *testing.T) {
+	tests := []struct {
+		input     string
+		expected  float64
+		expectErr bool
+	}{
+		{"1+2", 3.0, false},
+		{"3*4", 12.0, false},
+		{"10/2", 5.0, false},
+		{"2^3", 8.0, false},
+		{"sin(0)", 0.0, false},
+		{"-5+3", -2.0, false},
+		{"", 0.0, true},
+		{"x + 1", 0.0, true},
+	}
+
+	for _, tt := range tests {
+		e := NewEngine()
+		result, err := e.Calculate(tt.input)
+
+		if tt.expectErr {
+			if err == nil {
+				t.Errorf("expected error for input '%s', got none", tt.input)
+			}
+		} else {
+			if err != nil {
+				t.Errorf("unexpected error for input '%s': %v", tt.input, err)
+			}
+
+			if result != tt.expected {
+				t.Errorf("expected result %f for input '%s', got %f", tt.expected, tt.input, result)
+			}
+		}
+	}
+}
+
+func TestEvaluatorPushValue(t *testing.T) {
+	e := NewEvaluator()
 	e.pushValue(42.0)
 
 	if len(e.resultStack) != 1 {
@@ -26,8 +99,8 @@ func TestPushValue(t *testing.T) {
 	}
 }
 
-func TestPopValue(t *testing.T) {
-	e := New()
+func TestEvaluatorPopValue(t *testing.T) {
+	e := NewEvaluator()
 	e.pushValue(10.0)
 	e.pushValue(20.0)
 
@@ -64,7 +137,7 @@ func TestPopValue(t *testing.T) {
 	}
 }
 
-func TestApplyBinaryOp(t *testing.T) {
+func TestEvaluatorApplyBinaryOp(t *testing.T) {
 	tests := []struct {
 		operation   string
 		a           float64
@@ -83,7 +156,7 @@ func TestApplyBinaryOp(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		e := New()
+		e := NewEvaluator()
 		result, err := e.applyBinaryOp(tt.operation, tt.a, tt.b)
 
 		if tt.expectError {
@@ -102,7 +175,7 @@ func TestApplyBinaryOp(t *testing.T) {
 	}
 }
 
-func TestApplyUnaryOp(t *testing.T) {
+func TestEvaluatorApplyUnaryOp(t *testing.T) {
 	tests := []struct {
 		operation   string
 		a           float64
@@ -117,7 +190,7 @@ func TestApplyUnaryOp(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		e := New()
+		e := NewEvaluator()
 		result, err := e.applyUnaryOp(tt.operation, tt.a)
 
 		if tt.expectError {
@@ -136,12 +209,12 @@ func TestApplyUnaryOp(t *testing.T) {
 	}
 }
 
-func TestEvaluateBinary(t *testing.T) {
-	e := New()
+func TestEvaluatorEvaluateBinary(t *testing.T) {
+	e := NewEvaluator()
 	e.pushValue(2.0)
 	e.pushValue(3.0)
 
-	token := lexer.Token{Type: lexer.Operator, Value: "+"}
+	token := Token{Type: Operator, Value: "+"}
 	err := e.evaluateBinary(token)
 
 	if err != nil {
@@ -156,18 +229,18 @@ func TestEvaluateBinary(t *testing.T) {
 		t.Errorf("expected result 5.0, got %f", e.resultStack[0])
 	}
 
-	e2 := New()
+	e2 := NewEvaluator()
 	err = e2.evaluateBinary(token)
 	if err == nil {
 		t.Errorf("expected error for insufficient operands, got none")
 	}
 }
 
-func TestEvaluateUnary(t *testing.T) {
-	e := New()
+func TestEvaluatorEvaluateUnary(t *testing.T) {
+	e := NewEvaluator()
 	e.pushValue(5.0)
 
-	token := lexer.Token{Type: lexer.Negation, Value: "-u"}
+	token := Token{Type: Negation, Value: "-u"}
 	err := e.evaluateUnary(token)
 
 	if err != nil {
@@ -182,14 +255,14 @@ func TestEvaluateUnary(t *testing.T) {
 		t.Errorf("expected result -5.0, got %f", e.resultStack[0])
 	}
 
-	e2 := New()
+	e2 := NewEvaluator()
 	err = e2.evaluateUnary(token)
 	if err == nil {
 		t.Errorf("expected error for insufficient operands, got none")
 	}
 }
 
-func TestValidateResult(t *testing.T) {
+func TestEvaluatorValidateResult(t *testing.T) {
 	tests := []struct {
 		name        string
 		stackValues []float64
@@ -202,7 +275,7 @@ func TestValidateResult(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e := New()
+			e := NewEvaluator()
 			for _, val := range tt.stackValues {
 				e.pushValue(val)
 			}
@@ -218,15 +291,15 @@ func TestValidateResult(t *testing.T) {
 	}
 }
 
-func TestEvaluateSimple(t *testing.T) {
-	e := New()
-	tokens := []lexer.Token{
-		{Type: lexer.Number, Value: "3"},
-		{Type: lexer.Number, Value: "4"},
-		{Type: lexer.Operator, Value: "+"},
+func TestEvaluatorEvaluateSimple(t *testing.T) {
+	e := NewEvaluator()
+	tokens := []Token{
+		{Type: Number, Value: "3"},
+		{Type: Number, Value: "4"},
+		{Type: Operator, Value: "+"},
 	}
 
-	result, err := e.Evaluate(tokens)
+	result, err := e.Evaluate(tokens, make(map[string]float64))
 
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
@@ -237,17 +310,17 @@ func TestEvaluateSimple(t *testing.T) {
 	}
 }
 
-func TestEvaluateComplex(t *testing.T) {
-	e := New()
-	tokens := []lexer.Token{
-		{Type: lexer.Number, Value: "2"},
-		{Type: lexer.Number, Value: "3"},
-		{Type: lexer.Number, Value: "4"},
-		{Type: lexer.Operator, Value: "*"},
-		{Type: lexer.Operator, Value: "+"},
+func TestEvaluatorEvaluateComplex(t *testing.T) {
+	e := NewEvaluator()
+	tokens := []Token{
+		{Type: Number, Value: "2"},
+		{Type: Number, Value: "3"},
+		{Type: Number, Value: "4"},
+		{Type: Operator, Value: "*"},
+		{Type: Operator, Value: "+"},
 	}
 
-	result, err := e.Evaluate(tokens)
+	result, err := e.Evaluate(tokens, make(map[string]float64))
 
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
@@ -258,14 +331,14 @@ func TestEvaluateComplex(t *testing.T) {
 	}
 }
 
-func TestEvaluateUnaryFunction(t *testing.T) {
-	e := New()
-	tokens := []lexer.Token{
-		{Type: lexer.Number, Value: "0"},
-		{Type: lexer.Function, Value: "sin"},
+func TestEvaluatorEvaluateUnaryFunction(t *testing.T) {
+	e := NewEvaluator()
+	tokens := []Token{
+		{Type: Number, Value: "0"},
+		{Type: Function, Value: "sin"},
 	}
 
-	result, err := e.Evaluate(tokens)
+	result, err := e.Evaluate(tokens, make(map[string]float64))
 
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
@@ -273,5 +346,43 @@ func TestEvaluateUnaryFunction(t *testing.T) {
 
 	if result != 0.0 {
 		t.Errorf("expected result 0.0, got %f", result)
+	}
+}
+
+func TestEvaluatorEvaluateWithVariable(t *testing.T) {
+	tokens := []Token{
+		{Type: Number, Value: "2"},
+		{Type: Variable, Value: "x"},
+		{Type: Operator, Value: "+"},
+	}
+
+	tests := []struct {
+		name        string
+		vars        map[string]float64
+		expected    float64
+		expectError bool
+	}{
+		{"defined variable", map[string]float64{"x": 3.0}, 5.0, false},
+		{"undefined variable", map[string]float64{"y": 3.0}, 0.0, true},
+		{"empty variables", map[string]float64{}, 0.0, true},
+	}
+
+	for _, tt := range tests {
+		e := NewEvaluator()
+		result, err := e.Evaluate(tokens, tt.vars)
+
+		if tt.expectError {
+			if err == nil {
+				t.Errorf("expected error for test '%s', got none", tt.name)
+			}
+		} else {
+			if err != nil {
+				t.Errorf("unexpected error for test '%s': %v", tt.name, err)
+			}
+
+			if result != tt.expected {
+				t.Errorf("expected result %f for test '%s', got %f", tt.expected, tt.name, result)
+			}
+		}
 	}
 }
