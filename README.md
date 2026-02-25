@@ -21,6 +21,25 @@ Unary functions currently only implemented for the CLI and direct input in edit 
 go install github.com/EwanClarke/postfixcalc@latest
 ```
 
+### Docker
+
+Build the Docker image:
+```
+docker build -t postfixcalc .
+```
+
+Run the calculator:
+```
+docker run -it postfixcalc ./calc
+docker run -it postfixcalc ./calc "2(3+2)"
+```
+
+Run the graph plotter:
+```
+docker run -it postfixcalc ./plot
+docker run -it postfixcalc ./plot "x^2"
+```
+
 ## Examples
 
 The calculator can be used from either the command line by following the command with a string containing the expression to evaluate, or through the TUI interface giving a more visual experience either through navigation of the on screen buttons or direct input with immediate evaluation of the current input.

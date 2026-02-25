@@ -97,7 +97,7 @@ func (m model) renderFooter() string {
 
 	switch m.mode {
 	case Nav:
-		instructions = "↑↓←→/hjkl navigate | Enter/Space select | / edit | Mouse cursor mode"
+		instructions = "↑↓←→/hjkl navigate | Enter/Space select | / edit | Mouse cursor mode | q/ctrl+c quit"
 	case Edit:
 		instructions = "Type expression | Esc back to nav | Mouse cursor mode"
 	case Cursor:
