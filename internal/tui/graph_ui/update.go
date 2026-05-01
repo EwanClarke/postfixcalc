@@ -1,8 +1,12 @@
 package graphui
 
 import (
+	"time"
+
 	tea "github.com/charmbracelet/bubbletea"
 )
+
+const renderTimeout = 2 * time.Second
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -20,7 +24,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	var cmd tea.Cmd
 	m.inputField, cmd = m.inputField.Update(msg)
-	m.updateGraph()
+	if m.updateGraph() {
+		return m, tea.Quit
+	}
 
 	return m, cmd
 }
@@ -39,17 +45,32 @@ func (m *model) updateCanvasSize() {
 	m.canvas.SetBounds(-10, 10, -5, 5)
 }
 
-func (m *model) updateGraph() {
+func (m *model) updateGraph() bool {
 	expr := m.inputField.Value()
 	if len(expr) == 0 {
 		m.err = ""
-		return
+		m.canvas.SetResult("")
+		return false
 	}
 
 	err := m.canvas.ChangeExpression(expr)
 	if err != nil {
-		m.err = err.Error()
-	} else {
+		m.canvas.SetResult("")
+		return false
+	}
+
+	resultChan := make(chan string, 1)
+	go func() {
+		result, _ := m.canvas.Render()
+		resultChan <- result
+	}()
+
+	select {
+	case <-time.After(renderTimeout):
+		return true
+	case result := <-resultChan:
+		m.canvas.SetResult(result)
 		m.err = ""
+		return false
 	}
 }

@@ -25,6 +25,7 @@ type Canvas struct {
 	bounds     Bounds
 	engine     *engine.Engine
 	postfix    []engine.Token
+	result     string
 }
 
 func NewCanvas() *Canvas {
@@ -60,6 +61,14 @@ func (c *Canvas) Resize(width int, height int) error {
 
 func (c *Canvas) Size() (int, int) {
 	return c.canvasSize.width, c.canvasSize.height
+}
+
+func (c *Canvas) SetResult(result string) {
+	c.result = result
+}
+
+func (c *Canvas) Result() string {
+	return c.result
 }
 
 func (c *Canvas) SetBounds(xMin, xMax, yMin, yMax float64) {

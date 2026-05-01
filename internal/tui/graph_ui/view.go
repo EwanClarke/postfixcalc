@@ -22,10 +22,7 @@ func (m model) View() string {
 }
 
 func (m model) renderGraph() string {
-	graph, err := m.canvas.Render()
-	if err != nil {
-		return m.styles.Error.Render(err.Error())
-	}
+	graph := m.canvas.Result()
 	if graph == "" {
 		width, height := m.canvas.Size()
 		placeholder := lipgloss.Place(
@@ -42,13 +39,17 @@ func (m model) renderGraph() string {
 
 func (m model) renderInputWithFooter() string {
 	inputView := m.inputField.View()
-	inputWithBorder := m.styles.InputBorder.Render(" " + inputView)
+	if m.err != "" {
+		inputView = m.styles.Error.Render(" " + m.err)
+	} else {
+		inputView = m.styles.InputBorder.Render(" " + inputView)
+	}
 
 	instructions := "Enter expression | q / ctrl+c to quit"
 	footerWidth := m.termWidth/2 - 2
 	footer := lipgloss.Place(footerWidth, 3, lipgloss.Center, lipgloss.Center, instructions, lipgloss.WithWhitespaceChars(" "))
 
-	return lipgloss.JoinHorizontal(lipgloss.Left, inputWithBorder, footer)
+	return lipgloss.JoinHorizontal(lipgloss.Left, inputView, footer)
 }
 
 func (m model) renderInput() string {
