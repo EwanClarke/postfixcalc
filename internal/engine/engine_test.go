@@ -1,8 +1,18 @@
 package engine
 
 import (
+	"math/big"
 	"testing"
 )
+
+// ratFromString is a test helper to build a *big.Rat from a string like "3/2" or "7".
+func ratFromString(s string) *big.Rat {
+	r := new(big.Rat)
+	if _, ok := r.SetString(s); !ok {
+		panic("ratFromString: invalid rat string: " + s)
+	}
+	return r
+}
 
 func TestNewEngine(t *testing.T) {
 	e := NewEngine()
@@ -43,7 +53,7 @@ func TestNewParser(t *testing.T) {
 }
 
 func TestNewEvaluator(t *testing.T) {
-	e := NewEvaluator()
+	e := NewEvaluator(Radians)
 
 	if len(e.resultStack) != 0 {
 		t.Errorf("expected empty result stack, got %v", e.resultStack)
@@ -53,22 +63,25 @@ func TestNewEvaluator(t *testing.T) {
 func TestEngineCalculate(t *testing.T) {
 	tests := []struct {
 		input     string
-		expected  float64
+		expected  *big.Rat
+		exact     bool
 		expectErr bool
 	}{
-		{"1+2", 3.0, false},
-		{"3*4", 12.0, false},
-		{"10/2", 5.0, false},
-		{"2^3", 8.0, false},
-		{"sin(0)", 0.0, false},
-		{"-5+3", -2.0, false},
-		{"", 0.0, true},
-		{"x + 1", 0.0, true},
+		{"1+2", ratFromString("3"), true, false},
+		{"3*4", ratFromString("12"), true, false},
+		{"10/2", ratFromString("5"), true, false},
+		{"1/3", ratFromString("1/3"), true, false},
+		{"1/3+1/6", ratFromString("1/2"), true, false},
+		// sin(0) = 0 but is inexact (float64 round-trip)
+		{"sin(0)", ratFromString("0"), false, false},
+		{"-5+3", ratFromString("-2"), true, false},
+		{"", nil, false, true},
+		{"x + 1", nil, false, true},
 	}
 
 	for _, tt := range tests {
 		e := NewEngine()
-		result, err := e.Calculate(tt.input)
+		result, exact, err := e.Calculate(tt.input)
 
 		if tt.expectErr {
 			if err == nil {
@@ -77,32 +90,35 @@ func TestEngineCalculate(t *testing.T) {
 		} else {
 			if err != nil {
 				t.Errorf("unexpected error for input '%s': %v", tt.input, err)
+				continue
 			}
-
-			if result != tt.expected {
-				t.Errorf("expected result %f for input '%s', got %f", tt.expected, tt.input, result)
+			if exact != tt.exact {
+				t.Errorf("expected exact=%v for input '%s', got %v", tt.exact, tt.input, exact)
+			}
+			if result.Cmp(tt.expected) != 0 {
+				t.Errorf("expected result %v for input '%s', got %v", tt.expected, tt.input, result)
 			}
 		}
 	}
 }
 
 func TestEvaluatorPushValue(t *testing.T) {
-	e := NewEvaluator()
-	e.pushValue(42.0)
+	e := NewEvaluator(Radians)
+	e.pushValue(ratFromString("42"))
 
 	if len(e.resultStack) != 1 {
 		t.Errorf("expected stack length 1 after push, got %d", len(e.resultStack))
 	}
 
-	if e.resultStack[0] != 42.0 {
-		t.Errorf("expected value 42.0, got %f", e.resultStack[0])
+	if e.resultStack[0].Cmp(ratFromString("42")) != 0 {
+		t.Errorf("expected value 42, got %v", e.resultStack[0])
 	}
 }
 
 func TestEvaluatorPopValue(t *testing.T) {
-	e := NewEvaluator()
-	e.pushValue(10.0)
-	e.pushValue(20.0)
+	e := NewEvaluator(Radians)
+	e.pushValue(ratFromString("10"))
+	e.pushValue(ratFromString("20"))
 
 	val, err := e.popValue()
 
@@ -110,16 +126,16 @@ func TestEvaluatorPopValue(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 
-	if val != 20.0 {
-		t.Errorf("expected popped value 20.0, got %f", val)
+	if val.Cmp(ratFromString("20")) != 0 {
+		t.Errorf("expected popped value 20, got %v", val)
 	}
 
 	if len(e.resultStack) != 1 {
 		t.Errorf("expected stack length 1 after pop, got %d", len(e.resultStack))
 	}
 
-	if e.resultStack[0] != 10.0 {
-		t.Errorf("expected remaining value 10.0, got %f", e.resultStack[0])
+	if e.resultStack[0].Cmp(ratFromString("10")) != 0 {
+		t.Errorf("expected remaining value 10, got %v", e.resultStack[0])
 	}
 
 	_, err = e.popValue()
@@ -140,36 +156,38 @@ func TestEvaluatorPopValue(t *testing.T) {
 func TestEvaluatorApplyBinaryOp(t *testing.T) {
 	tests := []struct {
 		operation   string
-		a           float64
-		b           float64
-		expected    float64
+		a           *big.Rat
+		b           *big.Rat
+		expected    *big.Rat
 		expectError bool
 	}{
-		{"+", 2.0, 3.0, 5.0, false},
-		{"-", 5.0, 2.0, 3.0, false},
-		{"*", 4.0, 6.0, 24.0, false},
-		{"/", 10.0, 2.0, 5.0, false},
-		{"/", 10.0, 0.0, 0.0, true},
-		{"^", 2.0, 3.0, 8.0, false},
-		{"^", 0.0, -1.0, 0.0, true},
-		{"%", 2.0, 3.0, 0.0, true},
+		{"+", ratFromString("2"), ratFromString("3"), ratFromString("5"), false},
+		{"-", ratFromString("5"), ratFromString("2"), ratFromString("3"), false},
+		{"*", ratFromString("4"), ratFromString("6"), ratFromString("24"), false},
+		{"/", ratFromString("10"), ratFromString("2"), ratFromString("5"), false},
+		{"/", ratFromString("10"), ratFromString("0"), nil, true},
+		// Exact rational arithmetic: 1/3 + 1/6 = 1/2
+		{"+", ratFromString("1/3"), ratFromString("1/6"), ratFromString("1/2"), false},
+		// ^ error case
+		{"^", ratFromString("0"), ratFromString("-1"), nil, true},
+		{"%", ratFromString("2"), ratFromString("3"), nil, true},
 	}
 
 	for _, tt := range tests {
-		e := NewEvaluator()
+		e := NewEvaluator(Radians)
 		result, err := e.applyBinaryOp(tt.operation, tt.a, tt.b)
 
 		if tt.expectError {
 			if err == nil {
-				t.Errorf("expected error for operation %s %f %f, got none", tt.operation, tt.a, tt.b)
+				t.Errorf("expected error for operation %s %v %v, got none", tt.operation, tt.a, tt.b)
 			}
 		} else {
 			if err != nil {
-				t.Errorf("unexpected error for operation %s %f %f: %v", tt.operation, tt.a, tt.b, err)
+				t.Errorf("unexpected error for operation %s %v %v: %v", tt.operation, tt.a, tt.b, err)
+				continue
 			}
-
-			if result != tt.expected {
-				t.Errorf("expected result %f for operation %s %f %f, got %f", tt.expected, tt.operation, tt.a, tt.b, result)
+			if result.Cmp(tt.expected) != 0 {
+				t.Errorf("expected result %v for operation %s %v %v, got %v", tt.expected, tt.operation, tt.a, tt.b, result)
 			}
 		}
 	}
@@ -178,41 +196,41 @@ func TestEvaluatorApplyBinaryOp(t *testing.T) {
 func TestEvaluatorApplyUnaryOp(t *testing.T) {
 	tests := []struct {
 		operation   string
-		a           float64
-		expected    float64
+		a           *big.Rat
+		expected    *big.Rat
 		expectError bool
 	}{
-		{"-u", 5.0, -5.0, false},
-		{"sin", 0.0, 0.0, false},
-		{"cos", 0.0, 1.0, false},
-		{"tan", 0.0, 0.0, false},
-		{"log", 5.0, 0.0, true},
+		{"-u", ratFromString("5"), ratFromString("-5"), false},
+		{"sin", ratFromString("0"), ratFromString("0"), false},
+		{"cos", ratFromString("0"), ratFromString("1"), false},
+		{"tan", ratFromString("0"), ratFromString("0"), false},
+		{"log", ratFromString("5"), nil, true},
 	}
 
 	for _, tt := range tests {
-		e := NewEvaluator()
+		e := NewEvaluator(Radians)
 		result, err := e.applyUnaryOp(tt.operation, tt.a)
 
 		if tt.expectError {
 			if err == nil {
-				t.Errorf("expected error for operation %s %f, got none", tt.operation, tt.a)
+				t.Errorf("expected error for operation %s %v, got none", tt.operation, tt.a)
 			}
 		} else {
 			if err != nil {
-				t.Errorf("unexpected error for operation %s %f: %v", tt.operation, tt.a, err)
+				t.Errorf("unexpected error for operation %s %v: %v", tt.operation, tt.a, err)
+				continue
 			}
-
-			if result != tt.expected {
-				t.Errorf("expected result %f for operation %s %f, got %f", tt.expected, tt.operation, tt.a, result)
+			if result.Cmp(tt.expected) != 0 {
+				t.Errorf("expected result %v for operation %s %v, got %v", tt.expected, tt.operation, tt.a, result)
 			}
 		}
 	}
 }
 
 func TestEvaluatorEvaluateBinary(t *testing.T) {
-	e := NewEvaluator()
-	e.pushValue(2.0)
-	e.pushValue(3.0)
+	e := NewEvaluator(Radians)
+	e.pushValue(ratFromString("2"))
+	e.pushValue(ratFromString("3"))
 
 	token := Token{Type: Operator, Value: "+"}
 	err := e.evaluateBinary(token)
@@ -225,11 +243,11 @@ func TestEvaluatorEvaluateBinary(t *testing.T) {
 		t.Errorf("expected stack length 1 after binary evaluation, got %d", len(e.resultStack))
 	}
 
-	if e.resultStack[0] != 5.0 {
-		t.Errorf("expected result 5.0, got %f", e.resultStack[0])
+	if e.resultStack[0].Cmp(ratFromString("5")) != 0 {
+		t.Errorf("expected result 5, got %v", e.resultStack[0])
 	}
 
-	e2 := NewEvaluator()
+	e2 := NewEvaluator(Radians)
 	err = e2.evaluateBinary(token)
 	if err == nil {
 		t.Errorf("expected error for insufficient operands, got none")
@@ -237,8 +255,8 @@ func TestEvaluatorEvaluateBinary(t *testing.T) {
 }
 
 func TestEvaluatorEvaluateUnary(t *testing.T) {
-	e := NewEvaluator()
-	e.pushValue(5.0)
+	e := NewEvaluator(Radians)
+	e.pushValue(ratFromString("5"))
 
 	token := Token{Type: Negation, Value: "-u"}
 	err := e.evaluateUnary(token)
@@ -251,11 +269,11 @@ func TestEvaluatorEvaluateUnary(t *testing.T) {
 		t.Errorf("expected stack length 1 after unary evaluation, got %d", len(e.resultStack))
 	}
 
-	if e.resultStack[0] != -5.0 {
-		t.Errorf("expected result -5.0, got %f", e.resultStack[0])
+	if e.resultStack[0].Cmp(ratFromString("-5")) != 0 {
+		t.Errorf("expected result -5, got %v", e.resultStack[0])
 	}
 
-	e2 := NewEvaluator()
+	e2 := NewEvaluator(Radians)
 	err = e2.evaluateUnary(token)
 	if err == nil {
 		t.Errorf("expected error for insufficient operands, got none")
@@ -265,17 +283,17 @@ func TestEvaluatorEvaluateUnary(t *testing.T) {
 func TestEvaluatorValidateResult(t *testing.T) {
 	tests := []struct {
 		name        string
-		stackValues []float64
+		stackValues []*big.Rat
 		expectError bool
 	}{
-		{"single result", []float64{42.0}, false},
-		{"empty stack", []float64{}, true},
-		{"multiple results", []float64{1.0, 2.0}, true},
+		{"single result", []*big.Rat{ratFromString("42")}, false},
+		{"empty stack", []*big.Rat{}, true},
+		{"multiple results", []*big.Rat{ratFromString("1"), ratFromString("2")}, true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e := NewEvaluator()
+			e := NewEvaluator(Radians)
 			for _, val := range tt.stackValues {
 				e.pushValue(val)
 			}
@@ -292,26 +310,28 @@ func TestEvaluatorValidateResult(t *testing.T) {
 }
 
 func TestEvaluatorEvaluateSimple(t *testing.T) {
-	e := NewEvaluator()
+	e := NewEvaluator(Radians)
 	tokens := []Token{
 		{Type: Number, Value: "3"},
 		{Type: Number, Value: "4"},
 		{Type: Operator, Value: "+"},
 	}
 
-	result, err := e.Evaluate(tokens, make(map[string]float64))
+	result, exact, err := e.Evaluate(tokens, make(map[string]*big.Rat))
 
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-
-	if result != 7.0 {
-		t.Errorf("expected result 7.0, got %f", result)
+	if !exact {
+		t.Errorf("expected exact result for integer addition")
+	}
+	if result.Cmp(ratFromString("7")) != 0 {
+		t.Errorf("expected result 7, got %v", result)
 	}
 }
 
 func TestEvaluatorEvaluateComplex(t *testing.T) {
-	e := NewEvaluator()
+	e := NewEvaluator(Radians)
 	tokens := []Token{
 		{Type: Number, Value: "2"},
 		{Type: Number, Value: "3"},
@@ -320,32 +340,37 @@ func TestEvaluatorEvaluateComplex(t *testing.T) {
 		{Type: Operator, Value: "+"},
 	}
 
-	result, err := e.Evaluate(tokens, make(map[string]float64))
+	result, exact, err := e.Evaluate(tokens, make(map[string]*big.Rat))
 
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-
-	if result != 14.0 {
-		t.Errorf("expected result 14.0, got %f", result)
+	if !exact {
+		t.Errorf("expected exact result for integer arithmetic")
+	}
+	if result.Cmp(ratFromString("14")) != 0 {
+		t.Errorf("expected result 14, got %v", result)
 	}
 }
 
 func TestEvaluatorEvaluateUnaryFunction(t *testing.T) {
-	e := NewEvaluator()
+	e := NewEvaluator(Radians)
 	tokens := []Token{
 		{Type: Number, Value: "0"},
 		{Type: Function, Value: "sin"},
 	}
 
-	result, err := e.Evaluate(tokens, make(map[string]float64))
+	result, exact, err := e.Evaluate(tokens, make(map[string]*big.Rat))
 
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-
-	if result != 0.0 {
-		t.Errorf("expected result 0.0, got %f", result)
+	// sin is a float64 round-trip — result should be inexact
+	if exact {
+		t.Errorf("expected inexact result for sin function")
+	}
+	if result.Cmp(ratFromString("0")) != 0 {
+		t.Errorf("expected result 0, got %v", result)
 	}
 }
 
@@ -358,18 +383,18 @@ func TestEvaluatorEvaluateWithVariable(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		vars        map[string]float64
-		expected    float64
+		vars        map[string]*big.Rat
+		expected    *big.Rat
 		expectError bool
 	}{
-		{"defined variable", map[string]float64{"x": 3.0}, 5.0, false},
-		{"undefined variable", map[string]float64{"y": 3.0}, 0.0, true},
-		{"empty variables", map[string]float64{}, 0.0, true},
+		{"defined variable", map[string]*big.Rat{"x": ratFromString("3")}, ratFromString("5"), false},
+		{"undefined variable", map[string]*big.Rat{"y": ratFromString("3")}, nil, true},
+		{"empty variables", map[string]*big.Rat{}, nil, true},
 	}
 
 	for _, tt := range tests {
-		e := NewEvaluator()
-		result, err := e.Evaluate(tokens, tt.vars)
+		e := NewEvaluator(Radians)
+		result, _, err := e.Evaluate(tokens, tt.vars)
 
 		if tt.expectError {
 			if err == nil {
@@ -378,11 +403,58 @@ func TestEvaluatorEvaluateWithVariable(t *testing.T) {
 		} else {
 			if err != nil {
 				t.Errorf("unexpected error for test '%s': %v", tt.name, err)
+				continue
 			}
+			if result.Cmp(tt.expected) != 0 {
+				t.Errorf("expected result %v for test '%s', got %v", tt.expected, tt.name, result)
+			}
+		}
+	}
+}
 
-			if result != tt.expected {
-				t.Errorf("expected result %f for test '%s', got %f", tt.expected, tt.name, result)
-			}
+// ---- FormatMixed tests ----
+
+func TestFormatMixed(t *testing.T) {
+	tests := []struct {
+		input    *big.Rat
+		expected string
+	}{
+		{ratFromString("0"), "0"},
+		{ratFromString("3"), "3"},
+		{ratFromString("-3"), "-3"},
+		{ratFromString("7/2"), "3 1/2"},
+		{ratFromString("-7/2"), "-3 1/2"},
+		{ratFromString("1/3"), "1/3"},
+		{ratFromString("-1/3"), "-1/3"},
+		{ratFromString("6/3"), "2"},     // reduces to whole number
+		{ratFromString("1/2"), "1/2"},   // proper fraction
+		{ratFromString("10/4"), "2 1/2"}, // reduces: 5/2 = 2 1/2
+	}
+
+	for _, tt := range tests {
+		result := FormatMixed(tt.input)
+		if result != tt.expected {
+			t.Errorf("FormatMixed(%v) = %q, want %q", tt.input, result, tt.expected)
+		}
+	}
+}
+
+func TestFormatDecimal(t *testing.T) {
+	tests := []struct {
+		input    *big.Rat
+		expected string
+	}{
+		{ratFromString("0"), "0"},
+		{ratFromString("3"), "3"},
+		{ratFromString("1/2"), "0.5"},
+		{ratFromString("7/2"), "3.5"},
+		{ratFromString("-7/2"), "-3.5"},
+	}
+
+	for _, tt := range tests {
+		result := FormatDecimal(tt.input)
+		if result != tt.expected {
+			t.Errorf("FormatDecimal(%v) = %q, want %q", tt.input, result, tt.expected)
 		}
 	}
 }

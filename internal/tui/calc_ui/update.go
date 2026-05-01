@@ -2,8 +2,9 @@ package calcui
 
 import (
 	"fmt"
+
 	"github.com/EwanClarke/postfixcalc/internal/engine"
-	"github.com/charmbracelet/bubbletea"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -59,6 +60,8 @@ func (m model) handleNavMode(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case OnScreen:
 				m.mode = Edit
 				m.inputField.Focus()
+			case OnTopBar:
+				m.handleTopBarPress()
 			}
 		case "/":
 			m.mode = Edit
@@ -98,13 +101,9 @@ func (m model) handleEditMode(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) handleCursorMode(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
+	switch msg.(type) {
 	case tea.KeyMsg:
 		m.mode = Nav
-	case tea.MouseMsg:
-		if msg.Type == tea.MouseLeft {
-			// Just stay in cursor mode on left click
-		}
 	}
 	return m, nil
 }
@@ -129,19 +128,67 @@ func (m *model) moveCursor(rowDelta, colDelta int) {
 				m.cursor.col = newCol
 			}
 		}
+
 	case OnScreen:
 		if rowDelta > 0 {
 			m.cursorLocation = OnGrid
 			m.cursor.row = 0
 		} else if rowDelta < 0 {
 			m.cursorLocation = OnTopBar
-			m.cursor.row = 0
+			m.topBarCol = 0
 		}
+
 	case OnTopBar:
 		if rowDelta > 0 {
+			// Move down into the screen area
 			m.cursorLocation = OnScreen
-			m.cursor.row = 0
+		} else if colDelta != 0 {
+			// Navigate left/right between top-bar items (0 = Deg/Rad, 1 = S/D)
+			newCol := m.topBarCol + colDelta
+			if newCol >= 0 && newCol <= 1 {
+				m.topBarCol = newCol
+			}
 		}
+	}
+}
+
+// handleTopBarPress handles Enter/Space on a focused top-bar toggle.
+func (m *model) handleTopBarPress() {
+	switch m.topBarCol {
+	case 0:
+		// Toggle AngleMode (Deg ↔ Rad)
+		if m.angleMode == engine.Degrees {
+			m.angleMode = engine.Radians
+		} else {
+			m.angleMode = engine.Degrees
+		}
+		// Recalculate immediately so any trig functions update
+		m.executeCalculation()
+	case 1:
+		// Toggle S/D OutputMode — only available when last result is exact
+		if !m.lastExact {
+			return
+		}
+		if m.outputMode == Standard {
+			m.outputMode = Decimal
+		} else {
+			m.outputMode = Standard
+		}
+		// Re-format the cached result immediately without recalculating
+		m.reformatOutput()
+	}
+}
+
+// reformatOutput re-renders outputField from the cached lastResult using the
+// current outputMode. Called after toggling S/D.
+func (m *model) reformatOutput() {
+	if m.lastResult == nil {
+		return
+	}
+	if m.outputMode == Decimal || !m.lastExact {
+		m.outputField = engine.FormatDecimal(m.lastResult)
+	} else {
+		m.outputField = engine.FormatMixed(m.lastResult)
 	}
 }
 
@@ -156,8 +203,13 @@ func (m *model) handleButtonPress() {
 		case "clear":
 			m.inputField.SetValue("")
 			m.outputField = ""
+			m.lastResult = nil
+			m.lastExact = true
 		case "delete":
-			m.inputField.SetValue(m.inputField.Value()[:len(m.inputField.Value())-1])
+			v := m.inputField.Value()
+			if len(v) > 0 {
+				m.inputField.SetValue(v[:len(v)-1])
+			}
 		}
 	case Action:
 		switch selectedButton.Value {
@@ -180,14 +232,22 @@ func (m *model) executeCalculation() {
 
 	if len(rawInput) == 0 {
 		m.outputField = ""
+		m.lastResult = nil
+		m.lastExact = true
 		return
 	}
 
 	e := engine.NewEngine()
-	result, err := e.Calculate(rawInput)
+	e.AngleMode = m.angleMode
+	result, exact, err := e.Calculate(rawInput)
 	if err != nil {
 		m.outputField = fmt.Sprintf("error %v", err)
-	} else {
-		m.outputField = fmt.Sprintf("%g", result)
+		m.lastResult = nil
+		m.lastExact = true
+		return
 	}
+
+	m.lastResult = result
+	m.lastExact = exact
+	m.reformatOutput()
 }

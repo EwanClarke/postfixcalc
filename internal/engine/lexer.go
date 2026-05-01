@@ -2,7 +2,7 @@ package engine
 
 import (
 	"fmt"
-	"strconv"
+	"math/big"
 	"strings"
 	"unicode"
 )
@@ -79,8 +79,9 @@ func (l *Lexer) Categorise(tokenValue string) TokenType {
 		return tType
 	}
 
-	if value, err := strconv.ParseFloat(tokenValue, 64); err == nil {
-		if value < 0 {
+	r := new(big.Rat)
+	if _, ok := r.SetString(tokenValue); ok {
+		if r.Sign() < 0 {
 			return Error
 		}
 		return Number

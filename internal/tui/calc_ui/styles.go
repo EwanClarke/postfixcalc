@@ -19,6 +19,11 @@ type Styles struct {
 	ActnBtn       lipgloss.Style
 	ActiveActnBtn lipgloss.Style
 
+	// Top-bar toggle buttons (AngleMode / OutputMode S/D)
+	TopBarBtn       lipgloss.Style
+	ActiveTopBarBtn lipgloss.Style
+	DimmedTopBarBtn lipgloss.Style // used for S/D when result is inexact
+
 	Footer lipgloss.Style
 
 	PrimaryGrid  lipgloss.Style
@@ -94,6 +99,24 @@ func DefaultStyles() Styles {
 	s.PrimaryGrid = lipgloss.NewStyle().
 		Width(width).
 		AlignHorizontal(lipgloss.Center)
+
+	// Top-bar toggle buttons: compact with subtle colouring.
+	s.TopBarBtn = lipgloss.NewStyle().
+		Padding(0, 1).
+		Foreground(lipgloss.Color("8")).
+		Border(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("8"))
+
+	s.ActiveTopBarBtn = s.TopBarBtn.Copy().
+		Foreground(lipgloss.Color("15")).
+		Bold(true).
+		Border(lipgloss.ThickBorder()).
+		BorderForeground(lipgloss.Color("15"))
+
+	// Dimmed: shown when the S/D toggle is unavailable (inexact result).
+	s.DimmedTopBarBtn = s.TopBarBtn.Copy().
+		Foreground(lipgloss.Color("0")).
+		BorderForeground(lipgloss.Color("0"))
 
 	return s
 }

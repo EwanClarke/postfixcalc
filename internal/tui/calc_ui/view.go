@@ -5,11 +5,12 @@ import (
 )
 
 func (m model) View() string {
+	topBar := m.renderTopBar()
 	screen := m.renderInputOutput()
 	mainGrid := m.renderButtonGrid()
 	footer := m.renderFooter()
 
-	mainContent := lipgloss.JoinVertical(lipgloss.Left, screen, mainGrid)
+	mainContent := lipgloss.JoinVertical(lipgloss.Left, topBar, screen, mainGrid)
 	mainContent = m.styles.BorderAround.Render(mainContent)
 
 	fullContent := lipgloss.JoinVertical(lipgloss.Left, mainContent, footer)
@@ -24,6 +25,35 @@ func (m model) View() string {
 		lipgloss.WithWhitespaceChars(" "),
 		lipgloss.WithWhitespaceForeground(lipgloss.NoColor{}),
 	)
+}
+
+// renderTopBar renders the AngleMode and S/D OutputMode toggles side-by-side.
+// The S/D button is dimmed when the last result was inexact (e.g. trig function).
+func (m model) renderTopBar() string {
+	// AngleMode button
+	var angleBtnStyle lipgloss.Style
+	if m.cursorLocation == OnTopBar && m.topBarCol == 0 {
+		angleBtnStyle = m.styles.ActiveTopBarBtn
+	} else {
+		angleBtnStyle = m.styles.TopBarBtn
+	}
+	angleBtn := angleBtnStyle.Render(m.angleMode.String())
+
+	// S/D OutputMode button
+	sdFocused := m.cursorLocation == OnTopBar && m.topBarCol == 1
+	var sdBtnStyle lipgloss.Style
+	switch {
+	case !m.lastExact:
+		// Inexact result — toggle is unavailable, render dimmed
+		sdBtnStyle = m.styles.DimmedTopBarBtn
+	case sdFocused:
+		sdBtnStyle = m.styles.ActiveTopBarBtn
+	default:
+		sdBtnStyle = m.styles.TopBarBtn
+	}
+	sdBtn := sdBtnStyle.Render(m.outputMode.String())
+
+	return lipgloss.JoinHorizontal(lipgloss.Top, angleBtn, sdBtn)
 }
 
 func (m model) renderInputOutput() string {

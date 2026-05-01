@@ -5,14 +5,16 @@ import (
 	"os"
 
 	"github.com/EwanClarke/postfixcalc/internal/engine"
-	"github.com/EwanClarke/postfixcalc/internal/tui/calc_ui"
+	calcui "github.com/EwanClarke/postfixcalc/internal/tui/calc_ui"
 	"github.com/spf13/cobra"
 )
 
 var verbose bool
+var decimal bool
 
 func init() {
 	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Display output from tokenisation and postfix steps")
+	rootCmd.Flags().BoolVarP(&decimal, "decimal", "d", false, "Display result as decimal instead of mixed fraction")
 }
 
 var rootCmd = &cobra.Command{
@@ -35,10 +37,19 @@ var rootCmd = &cobra.Command{
 
 func executeLogic(input string) {
 	e := engine.NewEngine()
-	res, err := e.Calculate(input)
+	result, exact, err := e.Calculate(input)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
+	}
+
+	// Format the result: -d flag always uses decimal; otherwise use mixed
+	// fraction for exact results and decimal for inexact (e.g. trig).
+	var formatted string
+	if decimal || !exact {
+		formatted = engine.FormatDecimal(result)
+	} else {
+		formatted = engine.FormatMixed(result)
 	}
 
 	if verbose {
@@ -62,7 +73,7 @@ func executeLogic(input string) {
 		fmt.Print("Result: ")
 	}
 
-	fmt.Println(res)
+	fmt.Println(formatted)
 }
 
 func Execute() {

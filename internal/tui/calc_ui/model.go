@@ -1,6 +1,9 @@
 package calcui
 
 import (
+	"math/big"
+
+	"github.com/EwanClarke/postfixcalc/internal/engine"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -47,10 +50,6 @@ type Button struct {
 	Width int
 }
 
-type ToggleButton struct {
-	Items []string
-}
-
 type OutputMode int
 
 const (
@@ -59,19 +58,10 @@ const (
 )
 
 func (o OutputMode) String() string {
-	return [...]string{"S", "D"}[0]
+	return [...]string{"S", "D"}[o]
 }
 
-type AngleMode int
 
-const (
-	Degrees AngleMode = iota
-	Radians
-)
-
-func (a AngleMode) String() string {
-	return [...]string{"Deg", "Rad"}[a]
-}
 
 type model struct {
 	styles         Styles
@@ -80,8 +70,11 @@ type model struct {
 	mode           InputMode
 	cursor         CursorPos
 	cursorLocation CursorLocation
+	topBarCol      int // 0 = AngleMode toggle, 1 = OutputMode (S/D) toggle
 	outputMode     OutputMode
-	angleMode      AngleMode
+	angleMode      engine.AngleMode
+	lastResult     *big.Rat // cached result for S/D re-formatting
+	lastExact      bool     // false when result used float64 approximation (e.g. trig)
 	primaryGrid    [][]Button
 	termWidth      int
 	termHeight     int
@@ -96,6 +89,8 @@ func InitialModel() model {
 		mode:           Nav,
 		styles:         DefaultStyles(),
 		cursorLocation: OnGrid,
+		topBarCol:      0,
+		lastExact:      true,
 		termWidth:      80, // default fallback
 		termHeight:     24, // default fallback
 		primaryGrid: [][]Button{
